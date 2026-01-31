@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+python-multipart
+cryptography
+PyJWT
+pydantic
+python-dotenv
+google-generativeai
+requests
+streamlit
