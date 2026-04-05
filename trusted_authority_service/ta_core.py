@@ -125,14 +125,35 @@ class TrustedAuthorityCore:
         return UploadResult(patient_id=patient_id, priority=priority, threshold=threshold, version=version)
 
     def reconstruct_latest(self, patient_id: str, requester: str) -> dict[str, Any]:
+        return self.reconstruct_latest_with_peer_availability(patient_id, requester=requester, available_peer_ids=None)
+
+    def reconstruct_latest_with_peer_availability(
+        self,
+        patient_id: str,
+        requester: str,
+        available_peer_ids: list[str] | None,
+    ) -> dict[str, Any]:
         rec = self.fabric.getLatestRecord(patient_id)
         aad = f"{patient_id}:{rec.version}".encode("utf-8")
 
-        peer_ids = list(self.peer_ids)[: rec.threshold]
+        allowed = set(available_peer_ids) if available_peer_ids is not None else None
         shares: list[bytes] = []
-        for peer_id in peer_ids:
-            wrapped = rec.shares_wrapped[peer_id]
+        used_peers: list[str] = []
+        for peer_id in self.peer_ids:
+            if allowed is not None and peer_id not in allowed:
+                continue
+            wrapped = rec.shares_wrapped.get(peer_id)
+            if wrapped is None:
+                continue
             shares.append(self.nmk_store.unwrap_share(peer_id, wrapped, aad=aad))
+            used_peers.append(peer_id)
+            if len(shares) >= rec.threshold:
+                break
+
+        if len(shares) < rec.threshold:
+            raise ValueError(
+                f"insufficient shares: need {rec.threshold}, got {len(shares)} (available={len(available_peer_ids) if available_peer_ids is not None else 'all'})"
+            )
 
         pdk = reconstruct_secret(shares)
 
@@ -163,6 +184,79 @@ class TrustedAuthorityCore:
             "version": rec.version,
             "file_b64": base64.b64encode(plaintext).decode("utf-8"),
             "audit_logs": [*rec.audit_logs, audit_entry],
+            "used_peers": used_peers,
+        }
+
+    def reconstruct_latest_with_metrics(self, patient_id: str, requester: str) -> dict[str, Any]:
+        t0 = time.perf_counter()
+        rec = self.fabric.getLatestRecord(patient_id)
+        t_fabric = time.perf_counter()
+
+        aad = f"{patient_id}:{rec.version}".encode("utf-8")
+
+        shares: list[bytes] = []
+        used_peers: list[str] = []
+        t_unwrap_start = time.perf_counter()
+        for peer_id in self.peer_ids:
+            wrapped = rec.shares_wrapped.get(peer_id)
+            if wrapped is None:
+                continue
+            shares.append(self.nmk_store.unwrap_share(peer_id, wrapped, aad=aad))
+            used_peers.append(peer_id)
+            if len(shares) >= rec.threshold:
+                break
+        t_unwrap_end = time.perf_counter()
+
+        if len(shares) < rec.threshold:
+            raise ValueError(f"insufficient shares: need {rec.threshold}, got {len(shares)}")
+
+        t_reconstruct_start = time.perf_counter()
+        pdk = reconstruct_secret(shares)
+        t_reconstruct_end = time.perf_counter()
+
+        t_store_start = time.perf_counter()
+        blob = self.store.get(rec.encrypted_file_path)
+        t_store_end = time.perf_counter()
+
+        if self.store.hash(blob) != rec.encrypted_file_hash:
+            raise ValueError("encrypted file hash mismatch")
+
+        nonce = blob[:12]
+        ciphertext = blob[12:]
+
+        t_decrypt_start = time.perf_counter()
+        plaintext = aes_decrypt(pdk, nonce, ciphertext, aad=aad)
+        t_decrypt_end = time.perf_counter()
+
+        audit_entry = {
+            "event": "READ",
+            "timestamp": time.time(),
+            "requester": requester,
+            "version": rec.version,
+        }
+        if hasattr(self.fabric, "appendAuditLog"):
+            self.fabric.appendAuditLog(patient_id, audit_entry)
+        else:
+            rec.audit_logs.append(audit_entry)
+            self.fabric.updateRecord(rec)
+
+        t_end = time.perf_counter()
+        return {
+            "patient_id": rec.patient_id,
+            "priority": rec.priority,
+            "threshold": rec.threshold,
+            "version": rec.version,
+            "file_b64": base64.b64encode(plaintext).decode("utf-8"),
+            "audit_logs": [*rec.audit_logs, audit_entry],
+            "used_peers": used_peers,
+            "timings": {
+                "fabric_get_latest_s": t_fabric - t0,
+                "unwrap_shares_s": t_unwrap_end - t_unwrap_start,
+                "reconstruct_secret_s": t_reconstruct_end - t_reconstruct_start,
+                "object_store_get_s": t_store_end - t_store_start,
+                "decrypt_s": t_decrypt_end - t_decrypt_start,
+                "total_s": t_end - t0,
+            },
         }
 
     def update_record(self, patient_id: str, new_file_bytes: bytes, filename: str, requester: str) -> UploadResult:
