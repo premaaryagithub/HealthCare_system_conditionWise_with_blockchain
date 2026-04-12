@@ -1,0 +1,22 @@
+\chapter{Conclusion and Future Work}
+
+\section{Summary of the Work}
+In this project, we have presented the design, architectural formulation, and technical implementation of a "Condition-Wise Healthcare System with Blockchain Integration." The primary objective of this work was to address the security, privacy, and availability weaknesses inherent in centralized Electronic Health Record (EHR) management by combining an immutable audit ledger (Hyperledger Fabric) with off-chain confidentiality enforced through AES-GCM encryption and Shamir's Secret Sharing.
+
+By compartmentalizing records condition-wise and dynamically determining threshold parameters based on priority, we mitigated single-point failure risks and limited the blast radius of key exposure. In Phase 2.2, we extended the system with a patient document simulation layer (to generate realistic evaluation inputs), a persistent disease-to-numeric identifier mapping (to standardize record keys), and enhanced experiments supporting both \texttt{single} and \texttt{patient\_docs} modes. Experimental outputs, exported as CSVs, demonstrated that the reconstruction success rates match the expected Shamir threshold behavior and that end-to-end reconstruction latency remains practical for the intended workflow \cite{kumar2021ensemble, li2023privacy}.
+
+\section{Limitations}
+Despite the highly successful execution and integration of the complex paradigms mentioned previously, the project ecosystem retains certain structural limitations warranting observation:
+\begin{itemize}
+    \item \textbf{LLM Over-dependency:} Relying extensively on third-party computational logic configurations (Large Language Models) to accurately analyze unformatted text and dictate secure threshold bounds introduces un-formalized inference risks, possibly leading to suboptimal urgency categorization.
+    \item \textbf{Scalable Node Master Key Turnover:} Although Node Master Keys (NMKs) effectively bind cryptographic boundaries, real-world deployment logistics requiring routine key rotation, node-cert revocations and dynamic peer-scaling processes inherently introduces excessive friction metrics without dedicated orchestration utilities.
+    \item \textbf{Data Ingestion Vectoring:} Currently, the environment predominantly evaluates text-oriented inputs (including simulated documents), while real hospital deployments often require secure handling of large binary modalities and standardized clinical formats \cite{kumar2021ensemble}.
+\end{itemize}
+
+\section{Future Work}
+Building tangibly upon the robust structural frameworks produced, several compelling vectors of academic and technical enhancement could prominently expand system validity dynamically:
+\begin{itemize}
+    \item \textbf{Integration of Advanced Diagnostic Modalities:} Future design iterations should natively implement advanced fragmentation routing processes effectively enabling streamlined ingestion, encryption, and secure retrievals concerning comprehensive multi-media DICOM imagery seamlessly.
+    \item \textbf{Fully Decentralized AI Frameworking:} Replacing external cloud-dependent interface points with localized execution environments leveraging distilled, open-source localized machine learning model boundaries entirely removing external third-party data tracking elements mathematically.
+    \item \textbf{Zero-Knowledge Proof Implementation:} Enhancing generalized verification functionalities alongside permissioned structures utilizing ZK-SNARK protocols allowing targeted system auditors mathematical confirmations verifying node procedural integrity metrics avoiding extensive decrypted data exposure inherently.
+\end{itemize} 

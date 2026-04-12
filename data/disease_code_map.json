@@ -1,0 +1,89 @@
+{
+  "items": [
+    {
+      "disease": "hypertension",
+      "id": 1
+    },
+    {
+      "disease": "heart attack",
+      "id": 2
+    },
+    {
+      "disease": "fever",
+      "id": 3
+    },
+    {
+      "disease": "diabetes",
+      "id": 4
+    },
+    {
+      "disease": "asthma",
+      "id": 5
+    },
+    {
+      "disease": "stroke",
+      "id": 6
+    },
+    {
+      "disease": "gastritis",
+      "id": 7
+    },
+    {
+      "disease": "migraine",
+      "id": 8
+    },
+    {
+      "disease": "common cold",
+      "id": 9
+    },
+    {
+      "disease": "kidney stones",
+      "id": 10
+    },
+    {
+      "disease": "major trauma",
+      "id": 11
+    },
+    {
+      "disease": "pneumonia",
+      "id": 12
+    },
+    {
+      "disease": "sepsis",
+      "id": 13
+    },
+    {
+      "disease": "dengue",
+      "id": 14
+    },
+    {
+      "disease": "cardiac arrest",
+      "id": 15
+    },
+    {
+      "disease": "respiratory failure",
+      "id": 16
+    },
+    {
+      "disease": "allergic rhinitis",
+      "id": 17
+    },
+    {
+      "disease": "skin rash",
+      "id": 18
+    },
+    {
+      "disease": "mild fever",
+      "id": 19
+    }
+  ],
+  "next_id": 20,
+  "legacy": {
+    "hypertension": "HA",
+    "heart attack": "HA",
+    "fever": "fever",
+    "diabetes": "diabetes",
+    "asthma": "asthma",
+    "stroke": "stroke"
+  }
+}

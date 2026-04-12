@@ -15,6 +15,8 @@ from fabric_adapter.rest_fabric import FabricRestAdapter
 from peer_nodes.peer_nmk import PeerNMKStore
 from storage.object_store import LocalObjectStore
 from trusted_authority_service.ta_core import TrustedAuthorityCore
+from patient_data import generate_patient_documents
+from disease_mapper import DiseaseCodeMapper
 
 
 def _build_ta(runtime_dir: Path, peer_ids: list[str], *, live: bool, fabric_rest_url: str | None) -> TrustedAuthorityCore:
@@ -36,6 +38,8 @@ def run(
     patient_id: str = "P001_HA",
     live: bool = False,
     fabric_rest_url: str | None = None,
+    mode: str = "single",
+    n_docs: int = 50,
 ) -> None:
     random.seed(seed)
 
@@ -46,14 +50,12 @@ def run(
     peer_ids = [f"peer{i}" for i in range(1, n_peers + 1)]
     ta = _build_ta(runtime_dir, peer_ids, live=live, fabric_rest_url=fabric_rest_url)
 
-    original = b"Patient report for evaluation"
-
     rows: list[dict] = []
-    priorities = ["LOW", "MEDIUM", "HIGH"]
+    mapper = DiseaseCodeMapper()
 
-    for prio in priorities:
+    def _run_one(record_key: str, payload: bytes, *, prio: str, patient_name: str | None, disease: str | None) -> None:
         os.environ["MOCK_LLM_PRIORITY"] = prio
-        up = ta.upload_new_record(patient_id=patient_id + f"_{prio}", file_bytes=original, filename="eval.txt")
+        up = ta.upload_new_record(patient_id=record_key, file_bytes=payload, filename="eval.txt")
 
         for f in range(0, n_peers + 1):
             success = 0
@@ -72,7 +74,11 @@ def run(
 
             rows.append(
                 {
+                    "mode": mode,
+                    "patient_name": patient_name or "",
+                    "disease": disease or "",
                     "priority": prio,
+                    "record_key": record_key,
                     "threshold_k": up.threshold,
                     "n_peers": n_peers,
                     "failed_peers_f": f,
@@ -82,6 +88,26 @@ def run(
                     "success_rate": success / float(trials_per_f),
                 }
             )
+
+    if (mode or "").strip().lower() == "single":
+        original = b"Patient report for evaluation"
+        priorities = ["LOW", "MEDIUM", "HIGH"]
+        print(f"[fault_tolerance] mode=single priorities={priorities} trials={trials_per_f} n_peers={n_peers}")
+        for prio in priorities:
+            _run_one(patient_id + f"_{prio}", original, prio=prio, patient_name=None, disease=None)
+    elif (mode or "").strip().lower() == "patient_docs":
+        print(f"[fault_tolerance] mode=patient_docs n_docs={n_docs} trials={trials_per_f} n_peers={n_peers}")
+        docs = generate_patient_documents(n_docs, seed=seed, start_patient_number=21)
+        for d in docs:
+            dc = mapper.ensure_disease(d.disease)
+            record_key = mapper.make_standard_record_key(d.patient_number, d.disease)
+            payload = d.to_text().encode("utf-8")
+            print(
+                f"[doc] name={d.patient_name} disease={dc.disease} prio={d.priority} code={record_key} legacy={dc.legacy_code or ''}"
+            )
+            _run_one(record_key, payload, prio=d.priority, patient_name=d.patient_name, disease=dc.disease)
+    else:
+        raise ValueError("invalid mode (expected: single | patient_docs)")
 
     out_csv.parent.mkdir(parents=True, exist_ok=True)
     with out_csv.open("w", newline="", encoding="utf-8") as f:
@@ -103,6 +129,8 @@ if __name__ == "__main__":
     parser.add_argument("--n-peers", type=int, default=5)
     parser.add_argument("--trials", type=int, default=50, help="Trials per failure count f")
     parser.add_argument("--seed", type=int, default=7)
+    parser.add_argument("--mode", default="single", choices=["single", "patient_docs"], help="Execution mode")
+    parser.add_argument("--n-docs", type=int, default=50, help="Number of patient documents (mode=patient_docs)")
     args = parser.parse_args()
 
     base = Path(__file__).resolve().parents[1]
@@ -114,4 +142,6 @@ if __name__ == "__main__":
         seed=args.seed,
         live=bool(args.live),
         fabric_rest_url=args.fabric_rest_url,
+        mode=args.mode,
+        n_docs=args.n_docs,
     )

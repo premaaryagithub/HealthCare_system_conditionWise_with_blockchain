@@ -1,0 +1,62 @@
+[
+  {
+    "patient_number": 21,
+    "patient_name": "Aarav Sharma",
+    "disease": "hypertension",
+    "priority": "MEDIUM"
+  },
+  {
+    "patient_number": 22,
+    "patient_name": "Diya Reddy",
+    "disease": "common cold",
+    "priority": "LOW"
+  },
+  {
+    "patient_number": 23,
+    "patient_name": "Arjun Patel",
+    "disease": "heart attack",
+    "priority": "HIGH"
+  },
+  {
+    "patient_number": 24,
+    "patient_name": "Meera Nair",
+    "disease": "asthma",
+    "priority": "MEDIUM"
+  },
+  {
+    "patient_number": 25,
+    "patient_name": "Vihaan Gupta",
+    "disease": "stroke",
+    "priority": "HIGH"
+  },
+  {
+    "patient_number": 26,
+    "patient_name": "Ananya Kumar",
+    "disease": "migraine",
+    "priority": "LOW"
+  },
+  {
+    "patient_number": 27,
+    "patient_name": "Sai Singh",
+    "disease": "diabetes",
+    "priority": "MEDIUM"
+  },
+  {
+    "patient_number": 28,
+    "patient_name": "Kavya Rao",
+    "disease": "pneumonia",
+    "priority": "MEDIUM"
+  },
+  {
+    "patient_number": 29,
+    "patient_name": "Ishaan Das",
+    "disease": "sepsis",
+    "priority": "HIGH"
+  },
+  {
+    "patient_number": 30,
+    "patient_name": "Nisha Iyer",
+    "disease": "allergic rhinitis",
+    "priority": "LOW"
+  }
+]

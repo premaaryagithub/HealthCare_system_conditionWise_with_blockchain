@@ -1,0 +1,37 @@
+\chapter{Implementation Details}
+
+\section{Environment Setup and Toolchain}
+The implementation of the condition-wise healthcare secure system necessitated a sophisticated, multi-language paradigm spanning contemporary technologies.
+For executing the project infrastructure, the underlying operating environment utilized Linux distributions specifically facilitated by Windows Subsystem for Linux (WSL). We leveraged robust open-source stacks including Python 3 for advanced backend machine-learning endpoints, Node.js for bridging the gap to Hyperledger Fabric core networks \cite{seidi2025decentralized}, and Streamlit for rapid, intuitive user interfacing.
+
+The Hyperledger Fabric network binaries and configurations were bootstrapped via the official \texttt{fabric-samples} methodologies, simulating a robust permissioned ledger consisting of multiple peer organizations under the overarching framework titled \texttt{Org1MSP}.
+
+\section{Trusted Authority Backend (Python \& FastAPI)}
+The Trusted Authority Service, forming the epicenter of cryptographic and administrative functions, was built fundamentally on the FastAPI framework utilizing Uvicorn for asynchronous server hosting. FastAPI provided extraordinary advantages due to its native adherence to Python type-hinting, automatic OpenAPI (Swagger) documentation generation, and high-performance routing capabilities.
+
+Central components included modules explicitly designated for \texttt{crypto} processing and \texttt{storage} management. The \texttt{shamir.py} module executed the complex finite-field polynomial operations essential for secret sharing and Lagrange interpolation. Meanwhile, the \texttt{aes\_gcm.py} module encapsulated authenticated encryption loops, effectively obfuscating arbitrary byte arrays stemming from critical document uploads.
+
+The integration with the overarching LLM engine dynamically captured inputs via prompt engineering, querying the interface, and securely extracting priority classifications (e.g., \texttt{LOW}, \texttt{MEDIUM}, \texttt{HIGH}) directly influencing cryptographic pathways via the environment configuration. To support reproducible evaluation, the implementation also provides a mock-priority mode that can override LLM classification for experiments.
+
+In Phase 2.2, an additional simulation layer was introduced to generate structured, realistic patient documents for evaluation. The \texttt{patient\_data.py} module constructs patient documents containing a patient name, disease label, and priority category, and serializes them into upload-ready text files. This enabled experiments to move beyond a single static sample and instead evaluate the system over a dataset-like workload.
+
+To standardize record identifiers and enable consistent storage for simulated conditions, a persistent disease-to-numeric identifier mapping was implemented in \texttt{disease\_mapper.py}. The mapping is stored in \texttt{data/disease\_code\_map.json} and supports both forward lookup (disease $\rightarrow$ numeric id) and legacy compatibility. Record keys are generated in the format \texttt{<patient\_number>\_<disease\_id>} (e.g., \texttt{21\_5}), which is compatible with existing patient-id parsing logic.
+
+\section{Fabric Gateway Application (Node.js)}
+Given that interacting gracefully with the underlying Golang-coded Hyperledger Fabric blockchain necessitates optimized SDK integration, a bridging service dubbed the \texttt{fabric-gateway-service} was created using Node.js.
+This lightweight web service functioned primarily as an enterprise-grade message broker parsing HTTP REST payloads sourced from the Python FastAPI server and translating them into robust gRPC calls handled by the formal \texttt{fabric-network} SDK logic.
+
+Chaincode operations deployed within the channel \texttt{mychannel} focused relentlessly on parsing JSON structures that captured patient metadata. Specifically, keys such as the patient ID merged with a condition suffix (e.g., \texttt{P001\_15\_fever}), tracking \texttt{shares\_wrapped} matrices, and documenting the active threshold criteria limits directly.
+
+\section{User Dashboard (Streamlit)}
+A visually compelling frontend was crafted utilizing Streamlit---an advanced analytical framework tailored for rapid development workflows. The intuitive application, situated within the \texttt{ui\_dashboard} directory, encapsulated comprehensive web panels for the dual roles inherent in the system:
+\begin{enumerate}
+    \item \textbf{Hospital / Administrative Upload Interface:} Enabled designated clinical staff to directly submit raw plaintext medical reports, select relative condition metadata, and trace the upload success states, gracefully translating complex server exceptions into readable notifications.
+    \item \textbf{Doctor Retrieval Screen:} Provided streamlined visual functionality where authorized practitioners could invoke reconstruction sequences by entering Patient ID combinations. The interface distinctly mapped the network response, fetching the decrypted data natively onto the active screen only upon a successful node cryptographic aggregation.
+\end{enumerate}
+
+\section{Scripting and Orchestration Execution}
+A sophisticated web of native shell scripts was deployed to orchestrate the layered launch of system nodes. Standard network deployment protocols commenced with invoking \texttt{./network.sh up createChannel} to scaffold the foundational Fabric test network, followed systematically by the \texttt{deployCC} routines establishing the \texttt{healthcare} chaincode.
+Parallel executions deployed the \texttt{node index.js} gateway, alongside the FastAPI command \texttt{python -m uvicorn trusted\_authority\_service.app:app} and finally \texttt{streamlit run} to anchor the frontend logic. These isolated services communicated flawlessly over designated TCP ports, illustrating a production-ready blueprint.
+
+For evaluation, the \texttt{experiments/} folder contains Python scripts that can be executed in two modes: \texttt{single} (backward compatible single-text input) and \texttt{patient\_docs} (dataset-style simulated patient documents). A dedicated \texttt{--mode} flag controls the input style and ensures that the same cryptographic pipeline is validated under both workloads.
