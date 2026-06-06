@@ -423,6 +423,4 @@ If you're a student looking at this for reference — the `crypto/shamir.py` imp
 
 ---
 
-## 📄 License
 
-MIT — feel free to study, modify, and build on this.
